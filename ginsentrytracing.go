@@ -57,35 +57,35 @@ func FromHTTPStatusToSentryStatus(code int) sentry.SpanStatus {
 
 type Option struct {
 	GetTraceIDFromRequest func(*gin.Context) string
-	GetBaddageFromRequest func(*gin.Context) string
+	GetBaggageFromRequest func(*gin.Context) string
 }
 
 func NewDefaultOption() *Option {
 	return &Option{
 		GetTraceIDFromRequest: func(ctx *gin.Context) string { return ctx.GetHeader(SENTRY_TRACE_HEADER) },
-		GetBaddageFromRequest: func(ctx *gin.Context) string { return ctx.GetHeader(SENTRY_BAGGAGE_HEADER) },
+		GetBaggageFromRequest: func(ctx *gin.Context) string { return ctx.GetHeader(SENTRY_BAGGAGE_HEADER) },
 	}
 }
 
 type Options = func(*Option)
 
 func AttachSpan(opts ...Options) gin.HandlerFunc {
-	defaultopt := NewDefaultOption()
-	for _, optfunc := range opts {
-		optfunc(defaultopt)
+	defaultOpt := NewDefaultOption()
+	for _, optFunc := range opts {
+		optFunc(defaultOpt)
 	}
 
 	return func(ctx *gin.Context) {
 		name := fmt.Sprintf("%v_%v", ctx.Request.Method, ctx.FullPath())
-		trace := defaultopt.GetTraceIDFromRequest(ctx)
-		baggage := defaultopt.GetBaddageFromRequest(ctx)
-		tranaction := sentry.StartTransaction(ctx, name, sentry.ContinueFromHeaders(trace, baggage))
-		ctx.Set(_TRANSACTION_KEY, tranaction)
-		ctx.Writer.Header().Set(SENTRY_TRACE_HEADER, tranaction.ToSentryTrace())
-		ctx.Writer.Header().Set(SENTRY_BAGGAGE_HEADER, tranaction.ToBaggage())
+		trace := defaultOpt.GetTraceIDFromRequest(ctx)
+		baggage := defaultOpt.GetBaggageFromRequest(ctx)
+		transaction := sentry.StartTransaction(ctx, name, sentry.ContinueFromHeaders(trace, baggage))
+		ctx.Set(_TRANSACTION_KEY, transaction)
+		ctx.Writer.Header().Set(SENTRY_TRACE_HEADER, transaction.ToSentryTrace())
+		ctx.Writer.Header().Set(SENTRY_BAGGAGE_HEADER, transaction.ToBaggage())
 		ctx.Next()
-		tranaction.Status = FromHTTPStatusToSentryStatus(ctx.Writer.Status())
-		tranaction.Finish()
+		transaction.Status = FromHTTPStatusToSentryStatus(ctx.Writer.Status())
+		transaction.Finish()
 	}
 }
 
